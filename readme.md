@@ -16,6 +16,7 @@ type User struct {
 ```
 
 ### Register Plugin
+default register a default AES CryptoStrategy.
 ```go
 db, _ = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 db.Use(NewCryptoPlugin(&Config{
@@ -23,6 +24,14 @@ db.Use(NewCryptoPlugin(&Config{
 }))
 db.AutoMigrate(&User{})
 
+```
+implement interface `CryptoStrategy`, and register your own strategies.
+```go
+// register strategy
+crypto.RegisterCryptoStrategy(MyAesCryptoStrategy{})
+
+// use in tag
+Email  string `gorm:"column:email" crypto:"myAes"`
 ```
 
 ### Start use:
