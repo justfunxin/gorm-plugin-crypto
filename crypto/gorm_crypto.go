@@ -27,22 +27,11 @@ func GetCryptoStrategy(cryptoType string) CryptoStrategy {
 	return cryptoStrategies[strings.ToUpper(cryptoType)]
 }
 
-type Config struct {
-	Key string
-}
-
 type CryptoPlugin struct {
-	config *Config
 }
 
-func NewCryptoPlugin(config *Config) *CryptoPlugin {
-	if config == nil {
-		panic("config is nil")
-	}
-	if len(config.Key) == 0 {
-		panic("lost required config key")
-	}
-	return &CryptoPlugin{config: config}
+func NewCryptoPlugin() *CryptoPlugin {
+	return &CryptoPlugin{}
 }
 
 func (m *CryptoPlugin) Name() string {
@@ -51,13 +40,10 @@ func (m *CryptoPlugin) Name() string {
 
 func (m *CryptoPlugin) Initialize(db *gorm.DB) error {
 	cryptoStrategies = make(map[string]CryptoStrategy)
-	RegisterCryptoStrategy(NewAesCryptoStrategy(m.config.Key))
-
 	db.Callback().Create().Before("gorm:create").Register("crypt_plugin:before_create", EncryptParamBeforeCreate)
 	db.Callback().Update().Before("gorm:update").Register("crypt_plugin:before_update", EncryptParamBeforeUpdate)
 	db.Callback().Query().Before("gorm:query").Register("crypt_plugin:before_query", EncryptParamBeforeQuery)
 	db.Callback().Query().After("gorm:query").Register("crypt_plugin:after_query", DecryptResultAfterQuery)
-
 	return nil
 }
 
@@ -147,8 +133,8 @@ func EncryptParamBeforeUpdate(db *gorm.DB) {
 			updateV := updateInfo[updateColumn]
 			updateField := db.Statement.Schema.LookUpField(updateColumn)
 			if ct, ok := updateField.Tag.Lookup(CryptoTag); ok {
-				dFunc := GetCryptoStrategy(ct)
-				encryptionValue := dFunc.Encrypt(cast.ToString(updateV), updateField, db)
+				fieldStrategy := GetCryptoStrategy(ct)
+				encryptionValue := fieldStrategy.Encrypt(cast.ToString(updateV), updateField, db)
 				updateInfo[updateColumn] = encryptionValue
 			}
 		}
@@ -163,9 +149,9 @@ func EncryptParamBeforeUpdate(db *gorm.DB) {
 				if len(val) == 0 {
 					continue
 				}
-				dFunc := GetCryptoStrategy(ct)
+				fieldStrategy := GetCryptoStrategy(ct)
 				dbField := db.Statement.Schema.LookUpField(field.Name)
-				encryptionValue := dFunc.Encrypt(cast.ToString(val), dbField, db)
+				encryptionValue := fieldStrategy.Encrypt(cast.ToString(val), dbField, db)
 				destValue.Field(i).SetString(encryptionValue)
 			}
 		}

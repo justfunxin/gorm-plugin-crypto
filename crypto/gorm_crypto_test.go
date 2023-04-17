@@ -19,10 +19,8 @@ func TestMain(m *testing.M) {
 
 func setup() {
 	db, _ = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
-	db.Use(NewCryptoPlugin(&Config{
-		Key: "1234567890123456",
-	}))
-
+	db.Use(NewCryptoPlugin())
+	RegisterCryptoStrategy(NewAesCryptoStrategy("1234567890123456"))
 	db.AutoMigrate(&User{})
 }
 
