@@ -1,4 +1,4 @@
-module github.com/kangarooxin/gorm-crypt
+module github.com/kangarooxin/gorm-plugin-crypto
 
 go 1.19
 
