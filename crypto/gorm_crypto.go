@@ -179,7 +179,7 @@ func DecryptResultAfterQuery(db *gorm.DB) {
 	if len(fields) == 0 {
 		return
 	}
-	refVal := reflect.ValueOf(db.Statement.Model).Elem()
+	refVal := reflect.ValueOf(db.Statement.Dest).Elem()
 	switch refVal.Kind() {
 	case reflect.Struct:
 		decryptFields(refVal, fields, db)
