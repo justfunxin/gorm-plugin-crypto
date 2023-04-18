@@ -69,7 +69,7 @@ var cryptoFieldsMap = cmap.New[[]*CryptoField]()
 
 func EncryptParamBeforeCreate(db *gorm.DB) {
 	fields := getSchemaCryptoFields(db.Statement.Schema)
-	if len(fields) == 0 {
+	if fields == nil || len(fields) == 0 {
 		return
 	}
 	switch db.Statement.ReflectValue.Kind() {
@@ -199,6 +199,9 @@ func DecryptResultAfterQuery(db *gorm.DB) {
 }
 
 func getSchemaCryptoFields(schema *schema.Schema) []*CryptoField {
+	if schema == nil {
+		return nil
+	}
 	schemaName := schema.String()
 	if fields, t := cryptoFieldsMap.Get(schemaName); t {
 		return fields
