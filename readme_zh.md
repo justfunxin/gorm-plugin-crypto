@@ -1,23 +1,25 @@
 # [gorm-plugin-crypto](https://github.com/kangarooxin/gorm-plugin-crypto)
 
-this is a gorm plugin, encrypt and decrypt struct field with tag.
+通过Gorm插件，加解密数据，代码入侵率低。
+- 默认内置了AES加解密策略
+- 自定义多种加解密策略，通过tag指定策略
 
-## Usage:
-1. import lib
+## 使用步骤:
+1. 引入包
 ```go
 go get -u github.com/kangarooxin/gorm-plugin-crypto
 ```
 
-2.  Register Plugin
+2.  注册插件，注册默认的加解密策略
 ```go
 db, _ = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 db.Use(crypto.NewCryptoPlugin())
-// Register Default AES Strategy
+// 注册默认的AES加解密策略
 RegisterCryptoStrategy(crypto.NewAesCryptoStrategy("1234567890123456"))
 db.AutoMigrate(&User{})
 
 ```
-3. Mark the field with tag `crypto`
+3. 使用tag标记struct字段
 ```go
 type User struct {
 	ID     uint   `gorm:"primarykey"`
@@ -27,78 +29,78 @@ type User struct {
 	Mobile string `gorm:"column:mobile" crypto:"aes"`
 }
 ```
-4. Implement interface `CryptoStrategy` and register your own strategies.
+4. 自定义加解密策略，实现`CryptoStrategy`接口。
 ```go
-// register strategy
+// 注册加解密策略
 crypto.RegisterCryptoStrategy(MyAesCryptoStrategy("1234567890123456"))
 
-// use in tag
+// 使用自定义的策略tag标记
 Email  string `gorm:"column:email" crypto:"myAes"`
 ```
 
-### Start use:
+3. 开始使用:
 
-#### Insert
+#### 插入数据
 ```go
-// insert
 user1 := &User{ID: 1, Name: "User1", Age: 18, Email: "user1@example.com", Mobile: "13812345671"}
 user2 := &User{ID: 2, Name: "User2", Age: 12, Email: "user2@example.com", Mobile: "13812345672"}
 user3 := &User{ID: 3, Name: "User3", Age: 16, Email: "user3@example.com", Mobile: "13812345673"}
 
+// 单个插入
 db.Create(user1)
 assert.Equal(t, "{AES}g+2fA4EbDGDPpZVCF0quCwjz4w22BRHHb0xqEG86zL0=", user1.Email)
 assert.Equal(t, "{AES}Q/FDK7HDVHpArPRm3kCwEw==", user1.Mobile)
 
-// insert batch
+// 批量插入
 users := []*User{user2, user3}
 db.Create(users)
 assert.Equal(t, "{AES}VNrSbyrCwXfcBIoxYbO8hgjz4w22BRHHb0xqEG86zL0=", user2.Email)
 assert.Equal(t, "{AES}yRPUirBKNe9UFlIStzft/gjz4w22BRHHb0xqEG86zL0=", user3.Email)
 ```
 
-#### Query
+#### 查询
 ```go
-	// query by id
+// 通过主键查询
 var queryUser User
 db.First(&queryUser, 1)
 assert.Equal(t, "user1@example.com", queryUser.Email)
 assert.Equal(t, "13812345671", queryUser.Mobile)
 
-// query batch by ids
+// 通过主键批量查询
 var queryUsers []User
 db.Find(&queryUsers, []int{1, 2, 3})
 assert.Equal(t, "user1@example.com", queryUsers[0].Email)
 assert.Equal(t, "13812345672", queryUsers[1].Mobile)
 
-// query all
+// 查询全部
 var queryAllUsers []User
 db.Find(&queryAllUsers)
 assert.Equal(t, "user1@example.com", queryUsers[0].Email)
 assert.Equal(t, "13812345672", queryUsers[1].Mobile)
 
-// query by string
+// 通过自定义条件查询
 var queryUser1 User
 db.Where("name = ?", "User1").First(&queryUser1)
 assert.Equal(t, "user1@example.com", queryUser1.Email)
 assert.Equal(t, "13812345671", queryUser1.Mobile)
 
-// query by encrypted string, must encrypt manually or wrapper with `NewCryptoValue`
+// 通过加密字段查询时，由于无法识别模型，所以需要手动加密数据，可以通过`NewCryptoValue` 包装实现加密。
 var queryUser2 User
 db.Where("email = ?", NewCryptoValue("email", "user1@example.com")).First(&queryUser2)
 assert.Equal(t, "user1@example.com", queryUser2.Email)
 assert.Equal(t, "13812345671", queryUser2.Mobile)
 
-// query by Struct
+// 通过Struct条件查询
 var queryUser4 User
 db.Where(&User{Email: "user1@example.com"}).First(&queryUser4)
 assert.Equal(t, "13812345671", queryUser4.Mobile)
 
-// query by Map
+// 通过Map查询
 var queryUser5 User
 db.Where(map[string]interface{}{"email": "user1@example.com"}).First(&queryUser5)
 assert.Equal(t, "13812345671", queryUser5.Mobile)
 
-// query by Map
+// 通过Map In 查询
 var queryUser6 []User
 db.Where(map[string]interface{}{
 "email": []string{"user1@example.com", "user2@example.com"},
@@ -106,33 +108,33 @@ db.Where(map[string]interface{}{
 assert.Equal(t, "13812345671", queryUser6[0].Mobile)
 assert.Equal(t, "13812345672", queryUser6[1].Mobile)
 
-// query by raw
+// 通过原生Sql查询
 var queryUser3 User
 db.Raw("select * from test_user").Find(&queryUser3)
 assert.Equal(t, "user1@example.com", queryUser3.Email)
 ```
 
-#### Save and Update
+#### 保存和更新
 ```go
-//save
+// 有主键的保存，执行更新操作
 var saveUser User
 db.First(&saveUser)
 saveUser.Email = "User11@example.com"
 db.Save(&saveUser)
 assert.Equal(t, "{AES}siKVK6qMulucOlmRoZWLiWcZIqVzlNkqP58lypIfHtg=", saveUser.Email)
 
-//save without id
+// 无主键的保存，执行插入操作
 user4 := &User{Name: "User4", Age: 18, Email: "user4@example.com", Mobile: "13812345674"}
 db.Save(user4)
 assert.Equal(t, "{AES}g1WxCfYDcw/2k5g9kyFDpAjz4w22BRHHb0xqEG86zL0=", user4.Email)
 
-//update attributes with `struct`
+//使用 `struct`更新
 db.Model(&User{}).Where("id = ?", 1).Update("email", "user111@example.com")
 var queryUser7 User
 db.First(&queryUser7, 1)
 assert.Equal(t, "user111@example.com", queryUser7.Email)
 
-// Update attributes with `map`
+// 使用 `map`更新
 db.Model(&User{}).Where("id = ?", 2).Updates(map[string]interface{}{"email": "user222@example.com"})
 var queryUser8 User
 db.First(&queryUser8, 2)
