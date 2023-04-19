@@ -1,5 +1,5 @@
-// Package gorm_plugin_crypto is a GORM plugin, encrypt and decrypt struct field with tag.
-package gorm_plugin_crypto
+// Package crypto is a GORM plugin, encrypt and decrypt struct field with tag.
+package crypto
 
 import (
 	"github.com/kangarooxin/gorm-plugin-crypto/strategy"

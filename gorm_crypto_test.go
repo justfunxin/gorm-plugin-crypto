@@ -1,4 +1,4 @@
-package gorm_plugin_crypto
+package crypto
 
 import (
 	"github.com/kangarooxin/gorm-plugin-crypto/strategy"
