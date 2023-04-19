@@ -1,6 +1,7 @@
-package crypto
+package gorm_plugin_crypto
 
 import (
+	"github.com/kangarooxin/gorm-plugin-crypto/strategy"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ func TestMain(m *testing.M) {
 func setup() {
 	db, _ = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	db.Use(NewCryptoPlugin())
-	RegisterCryptoStrategy(NewAesCryptoStrategy("1234567890123456"))
+	RegisterCryptoStrategy(strategy.NewAesCryptoStrategy("1234567890123456"))
 	db.AutoMigrate(&User{})
 }
 

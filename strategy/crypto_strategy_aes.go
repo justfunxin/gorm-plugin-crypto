@@ -1,4 +1,4 @@
-package crypto
+package strategy
 
 import (
 	"encoding/base64"

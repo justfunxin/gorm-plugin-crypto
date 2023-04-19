@@ -1,6 +1,8 @@
-package crypto
+// Package gorm_plugin_crypto is a GORM plugin, encrypt and decrypt struct field with tag.
+package gorm_plugin_crypto
 
 import (
+	"github.com/kangarooxin/gorm-plugin-crypto/strategy"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/spf13/cast"
 	"gorm.io/gorm"
@@ -17,13 +19,13 @@ const (
 	CryptoTag = "crypto"
 )
 
-var cryptoStrategies map[string]CryptoStrategy
+var cryptoStrategies map[string]strategy.CryptoStrategy
 
-func RegisterCryptoStrategy(cryptoStrategy CryptoStrategy) {
+func RegisterCryptoStrategy(cryptoStrategy strategy.CryptoStrategy) {
 	cryptoStrategies[strings.ToUpper(cryptoStrategy.Name())] = cryptoStrategy
 }
 
-func GetCryptoStrategy(cryptoType string) CryptoStrategy {
+func GetCryptoStrategy(cryptoType string) strategy.CryptoStrategy {
 	return cryptoStrategies[strings.ToUpper(cryptoType)]
 }
 
@@ -39,7 +41,7 @@ func (m *CryptoPlugin) Name() string {
 }
 
 func (m *CryptoPlugin) Initialize(db *gorm.DB) error {
-	cryptoStrategies = make(map[string]CryptoStrategy)
+	cryptoStrategies = make(map[string]strategy.CryptoStrategy)
 	db.Callback().Create().Before("gorm:create").Register("crypt_plugin:before_create", EncryptParamBeforeCreate)
 	db.Callback().Update().Before("gorm:update").Register("crypt_plugin:before_update", EncryptParamBeforeUpdate)
 	db.Callback().Query().Before("gorm:query").Register("crypt_plugin:before_query", EncryptParamBeforeQuery)
@@ -62,7 +64,7 @@ func NewCryptoValue(column string, val string) *CryptoValue {
 type CryptoField struct {
 	Field      *schema.Field
 	CryptoType string
-	Strategy   CryptoStrategy
+	Strategy   strategy.CryptoStrategy
 }
 
 var cryptoFieldsMap = cmap.New[[]*CryptoField]()
