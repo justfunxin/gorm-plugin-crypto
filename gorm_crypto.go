@@ -192,11 +192,11 @@ func DecryptResultAfterQuery(db *gorm.DB) {
 				if curVal.Kind() == reflect.Pointer {
 					curVal = curVal.Elem()
 				}
-				decryptFields(curVal, fields, db)
+				if curVal.Kind() == reflect.Struct {
+					decryptFields(curVal, fields, db)
+				}
 			}
 		}
-	default:
-		db.Config.Logger.Error(db.Statement.Context, "unsupported kind:"+refVal.Kind().String())
 	}
 }
 
