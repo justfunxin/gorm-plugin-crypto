@@ -20,9 +20,9 @@ func TestMain(m *testing.M) {
 
 func setup() {
 	db, _ = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
-	db.Use(NewCryptoPlugin())
+	_ = db.Use(NewCryptoPlugin())
 	RegisterCryptoStrategy(strategy.NewAesCryptoStrategy("1234567890123456"))
-	db.AutoMigrate(&User{})
+	_ = db.AutoMigrate(&User{})
 }
 
 func teardown() {
@@ -110,19 +110,19 @@ func Test_Usage(t *testing.T) {
 	db.Raw("select * from test_user").Find(&queryUser3)
 	assert.Equal(t, "user1@example.com", queryUser3.Email)
 
-	//save
+	// save
 	var saveUser User
 	db.First(&saveUser)
 	saveUser.Email = "User11@example.com"
 	db.Save(&saveUser)
 	assert.Equal(t, "{AES}siKVK6qMulucOlmRoZWLiWcZIqVzlNkqP58lypIfHtg=", saveUser.Email)
 
-	//save without id
+	// save without id
 	user4 := &User{Name: "User4", Age: 18, Email: "user4@example.com", Mobile: "13812345674"}
 	db.Save(user4)
 	assert.Equal(t, "{AES}g1WxCfYDcw/2k5g9kyFDpAjz4w22BRHHb0xqEG86zL0=", user4.Email)
 
-	//update attributes with `struct`
+	// update attributes with `struct`
 	db.Model(&User{}).Where("id = ?", 1).Update("email", "user111@example.com")
 	var queryUser7 User
 	db.First(&queryUser7, 1)

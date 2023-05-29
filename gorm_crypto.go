@@ -42,10 +42,10 @@ func (m *CryptoPlugin) Name() string {
 
 func (m *CryptoPlugin) Initialize(db *gorm.DB) error {
 	cryptoStrategies = make(map[string]strategy.CryptoStrategy)
-	db.Callback().Create().Before("gorm:create").Register("crypt_plugin:before_create", EncryptParamBeforeCreate)
-	db.Callback().Update().Before("gorm:update").Register("crypt_plugin:before_update", EncryptParamBeforeUpdate)
-	db.Callback().Query().Before("gorm:query").Register("crypt_plugin:before_query", EncryptParamBeforeQuery)
-	db.Callback().Query().After("gorm:query").Register("crypt_plugin:after_query", DecryptResultAfterQuery)
+	_ = db.Callback().Create().Before("gorm:create").Register("crypt_plugin:before_create", EncryptParamBeforeCreate)
+	_ = db.Callback().Update().Before("gorm:update").Register("crypt_plugin:before_update", EncryptParamBeforeUpdate)
+	_ = db.Callback().Query().Before("gorm:query").Register("crypt_plugin:before_query", EncryptParamBeforeQuery)
+	_ = db.Callback().Query().After("gorm:query").Register("crypt_plugin:after_query", DecryptResultAfterQuery)
 	return nil
 }
 
@@ -71,7 +71,7 @@ var cryptoFieldsMap = cmap.New[[]*CryptoField]()
 
 func EncryptParamBeforeCreate(db *gorm.DB) {
 	fields := getSchemaCryptoFields(db.Statement.Schema)
-	if fields == nil || len(fields) == 0 {
+	if len(fields) == 0 {
 		return
 	}
 	switch db.Statement.ReflectValue.Kind() {
@@ -95,25 +95,22 @@ func EncryptParamBeforeQuery(db *gorm.DB) {
 	if we := db.Statement.Clauses["WHERE"].Expression; we != nil {
 		exprs := we.(clause.Where).Exprs
 		for i, expr := range exprs {
-			switch expr.(type) {
+			switch expr := expr.(type) {
 			case clause.Eq:
-				eq := expr.(clause.Eq)
-				if cf := findCryptFieldWithClauseColumn(eq.Column, fields); cf != nil {
+				if cf := findCryptFieldWithClauseColumn(expr.Column, fields); cf != nil {
 					exprs[i] = clause.Eq{
-						Column: eq.Column,
-						Value:  cf.Strategy.Encrypt(eq.Value.(string), cf.Field, db),
+						Column: expr.Column,
+						Value:  cf.Strategy.Encrypt(expr.Value.(string), cf.Field, db),
 					}
 				}
 			case clause.IN:
-				in := expr.(clause.IN)
-				if cf := findCryptFieldWithClauseColumn(in.Column, fields); cf != nil {
+				if cf := findCryptFieldWithClauseColumn(expr.Column, fields); cf != nil {
 					exprs[i] = clause.IN{
-						Column: in.Column,
-						Values: encryptValues(in.Values, cf, db),
+						Column: expr.Column,
+						Values: encryptValues(expr.Values, cf, db),
 					}
 				}
 			case clause.Expr:
-				expr := expr.(clause.Expr)
 				if expr.Vars != nil {
 					for i, v := range expr.Vars {
 						if v, ok := v.(*CryptoValue); ok {
@@ -130,10 +127,14 @@ func EncryptParamBeforeQuery(db *gorm.DB) {
 }
 
 func EncryptParamBeforeUpdate(db *gorm.DB) {
+	dbSchema := db.Statement.Schema
+	if dbSchema == nil {
+		return
+	}
 	if updateInfo, ok := db.Statement.Dest.(map[string]interface{}); ok {
 		for updateColumn := range updateInfo {
 			updateV := updateInfo[updateColumn]
-			updateField := db.Statement.Schema.LookUpField(updateColumn)
+			updateField := dbSchema.LookUpField(updateColumn)
 			if ct, ok := updateField.Tag.Lookup(CryptoTag); ok {
 				fieldStrategy := GetCryptoStrategy(ct)
 				encryptionValue := fieldStrategy.Encrypt(cast.ToString(updateV), updateField, db)
@@ -152,7 +153,7 @@ func EncryptParamBeforeUpdate(db *gorm.DB) {
 					continue
 				}
 				fieldStrategy := GetCryptoStrategy(ct)
-				dbField := db.Statement.Schema.LookUpField(field.Name)
+				dbField := dbSchema.LookUpField(field.Name)
 				encryptionValue := fieldStrategy.Encrypt(cast.ToString(val), dbField, db)
 				destValue.Field(i).SetString(encryptionValue)
 			}
