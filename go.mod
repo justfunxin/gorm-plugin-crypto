@@ -1,6 +1,6 @@
 module github.com/kangarooxin/gorm-plugin-crypto
 
-go 1.19
+go 1.18
 
 require (
 	github.com/duke-git/lancet/v2 v2.1.18

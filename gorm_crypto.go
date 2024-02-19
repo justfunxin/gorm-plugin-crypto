@@ -83,7 +83,7 @@ func EncryptParamBeforeCreate(db *gorm.DB) {
 	case reflect.Struct:
 		encryptFields(db.Statement.ReflectValue, fields, db)
 	default:
-		db.Config.Logger.Error(db.Statement.Context, "unsupported kind [%d] of value", db.Statement.ReflectValue.Kind())
+		return
 	}
 }
 
@@ -147,34 +147,41 @@ func EncryptParamBeforeUpdate(db *gorm.DB) {
 	if destType != nil {
 		for i := 0; i < destType.NumField(); i++ {
 			field := destType.Field(i)
+			fieldValue := destValue.Field(i)
 			if ct, ok := field.Tag.Lookup(CryptoTag); ok {
-				val := destValue.Field(i).String()
+				val := fieldValue.String()
 				if len(val) == 0 {
 					continue
 				}
 				fieldStrategy := GetCryptoStrategy(ct)
 				dbField := dbSchema.LookUpField(field.Name)
 				encryptionValue := fieldStrategy.Encrypt(cast.ToString(val), dbField, db)
-				destValue.Field(i).SetString(encryptionValue)
+				fieldValue.SetString(encryptionValue)
 			}
 		}
 	}
 }
 
-func getReflectElem(i any) (reflect.Type, reflect.Value) {
+func getReflectElem(i interface{}) (reflect.Type, reflect.Value) {
 	destType := reflect.TypeOf(i)
 	destValue := reflect.ValueOf(i)
-	for {
-		if destType.Elem().Kind() == reflect.Pointer {
-			destType = destType.Elem()
-			destValue = destValue.Elem()
-		} else if destType.Elem().Kind() == reflect.Struct {
-			break
-		} else {
-			return nil, reflect.ValueOf(nil)
-		}
+	// 如果参数是结构体，转换为指针并解引用
+	if destType.Kind() == reflect.Struct {
+		ptr := reflect.New(destType)
+		ptr.Elem().Set(destValue)
+		destType = ptr.Elem().Type()
+		destValue = ptr.Elem()
 	}
-	return destType.Elem(), destValue.Elem()
+	// 解引用指针
+	for destType.Kind() == reflect.Ptr {
+		destType = destType.Elem()
+		destValue = destValue.Elem()
+	}
+	// 检查最终类型是否为结构体
+	if destType.Kind() == reflect.Struct {
+		return destType, destValue
+	}
+	return nil, reflect.ValueOf(nil)
 }
 
 func DecryptResultAfterQuery(db *gorm.DB) {
