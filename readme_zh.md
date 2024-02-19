@@ -128,15 +128,22 @@ user4 := &User{Name: "User4", Age: 18, Email: "user4@example.com", Mobile: "1381
 db.Save(user4)
 assert.Equal(t, "{AES}g1WxCfYDcw/2k5g9kyFDpAjz4w22BRHHb0xqEG86zL0=", user4.Email)
 
-//使用 `struct`更新
+//使用 条件更新 单列
 db.Model(&User{}).Where("id = ?", 1).Update("email", "user111@example.com")
 var queryUser7 User
 db.First(&queryUser7, 1)
 assert.Equal(t, "user111@example.com", queryUser7.Email)
 
-// 使用 `map`更新
+// 使用 `map`更新 多列
 db.Model(&User{}).Where("id = ?", 2).Updates(map[string]interface{}{"email": "user222@example.com"})
 var queryUser8 User
 db.First(&queryUser8, 2)
 assert.Equal(t, "user222@example.com", queryUser8.Email)
+
+// 使用 `struct` 更新
+db.Model(User{}).Where("id = ?", "1").Updates(User{Email: "user1113@example.com"})
+var queryUser9 User
+err = db.First(&queryUser9, 1).Error
+assert.NoError(t, err)
+assert.Equal(t, "user1113@example.com", queryUser9.Email)
 ```

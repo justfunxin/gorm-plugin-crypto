@@ -114,27 +114,36 @@ assert.Equal(t, "user1@example.com", queryUser3.Email)
 
 #### Save and Update
 ```go
-//save
+// save
 var saveUser User
 db.First(&saveUser)
 saveUser.Email = "User11@example.com"
 db.Save(&saveUser)
 assert.Equal(t, "{AES}siKVK6qMulucOlmRoZWLiWcZIqVzlNkqP58lypIfHtg=", saveUser.Email)
 
-//save without id
+// save without id
 user4 := &User{Name: "User4", Age: 18, Email: "user4@example.com", Mobile: "13812345674"}
 db.Save(user4)
 assert.Equal(t, "{AES}g1WxCfYDcw/2k5g9kyFDpAjz4w22BRHHb0xqEG86zL0=", user4.Email)
 
-//update attributes with `struct`
+// update one column with condition
 db.Model(&User{}).Where("id = ?", 1).Update("email", "user111@example.com")
 var queryUser7 User
-db.First(&queryUser7, 1)
+err = db.First(&queryUser7, 1).Error
+assert.NoError(t, err)
 assert.Equal(t, "user111@example.com", queryUser7.Email)
 
 // Update attributes with `map`
 db.Model(&User{}).Where("id = ?", 2).Updates(map[string]interface{}{"email": "user222@example.com"})
 var queryUser8 User
-db.First(&queryUser8, 2)
+err = db.First(&queryUser8, 2).Error
+assert.NoError(t, err)
 assert.Equal(t, "user222@example.com", queryUser8.Email)
+
+// Update attributes with `struct`
+db.Model(User{}).Where("id = ?", "1").Updates(User{Email: "user1113@example.com"})
+var queryUser9 User
+err = db.First(&queryUser9, 1).Error
+assert.NoError(t, err)
+assert.Equal(t, "user1113@example.com", queryUser9.Email)
 ```
