@@ -13,7 +13,7 @@ go get -u github.com/kangarooxin/gorm-plugin-crypto
 db, _ = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 db.Use(crypto.NewCryptoPlugin())
 // Register Default AES Strategy
-RegisterCryptoStrategy(crypto.NewAesCryptoStrategy("1234567890123456"))
+RegisterCryptoStrategy(strategy.NewAesCryptoStrategy("1234567890123456"))
 db.AutoMigrate(&User{})
 
 ```
